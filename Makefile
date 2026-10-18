@@ -90,6 +90,7 @@ EXTRA_REG_GEN_ARGS = -P timing_width=20
 config-rdl: config-print
 	$(PYTHON) $(TOOL_DIR)/reg_gen/reg_gen.py --input-file=$(RDL_REGS) --output-dir=$(RDL_GEN_DIR) $(RDL_ARGS) $(EXTRA_REG_GEN_ARGS)
 	$(PYTHON) $(TOOL_DIR)/reg_gen/generate_csr_types.py $(RDL_GEN_DIR)
+	$(PYTHON) $(TOOL_DIR)/reg_gen/pmic_reg_gen.py --input-file=$(SRC_DIR)/rdl/pmic_registers.rdl --output-dir=$(RDL_GEN_DIR)
 
 config-print:
 	@echo ""

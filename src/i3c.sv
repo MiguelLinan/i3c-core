@@ -24,6 +24,7 @@ module i3c
 #(
     parameter bit ControllerEn = 0,
     parameter bit TargetEn = 1,
+`ifndef I3C_USE_SIMPLE
     parameter type csr_cfg_t = target_csr_t,
 
     parameter type hwif_out_t = csr_cfg_extractor#(csr_cfg_t)::hwif_out_t,
@@ -41,6 +42,7 @@ module i3c
     parameter type dat_in_t = csr_cfg_extractor#(csr_cfg_t)::dat_in_t,
     parameter type dct_out_t = csr_cfg_extractor#(csr_cfg_t)::dct_out_t,
     parameter type dct_in_t = csr_cfg_extractor#(csr_cfg_t)::dct_in_t,
+`endif
 `ifdef I3C_USE_AHB
     parameter int unsigned AhbDataWidth = `AHB_DATA_WIDTH,
     parameter int unsigned AhbAddrWidth = `AHB_ADDR_WIDTH,
@@ -52,16 +54,21 @@ module i3c
 `ifdef AXI_ID_FILTERING
     parameter int unsigned NumPrivIds = `NUM_PRIV_IDS,
 `endif
+`elsif I3C_USE_SIMPLE
+    parameter int unsigned SimpleAddrWidth = `SIMPLE_ADDR_WIDTH,
+    parameter int unsigned SimpleDataWidth = `SIMPLE_DATA_WIDTH,
 `endif
     parameter int unsigned DatAw = i3c_pkg::DatAw,
     parameter int unsigned DctAw = i3c_pkg::DctAw,
 
+`ifndef I3C_USE_SIMPLE
     parameter int unsigned CsrAddrWidth = (ControllerEn && TargetEn) ? controller_and_target_I3CCSR_pkg::controller_and_target_I3CCSR_MIN_ADDR_WIDTH :
                                (ControllerEn)             ? controller_I3CCSR_pkg::controller_I3CCSR_MIN_ADDR_WIDTH :
                                                             target_I3CCSR_pkg::target_I3CCSR_MIN_ADDR_WIDTH,
     parameter int unsigned CsrDataWidth = (ControllerEn && TargetEn) ? controller_and_target_I3CCSR_pkg::controller_and_target_I3CCSR_DATA_WIDTH :
                                (ControllerEn)             ? controller_I3CCSR_pkg::controller_I3CCSR_DATA_WIDTH :
                                                             target_I3CCSR_pkg::target_I3CCSR_DATA_WIDTH,
+`endif
 
     parameter int unsigned HciRespFifoDepth = `RESP_FIFO_DEPTH,
     parameter int unsigned HciCmdFifoDepth  = `CMD_FIFO_DEPTH,
@@ -202,6 +209,13 @@ module i3c
     input  logic                    disable_id_filtering_i,
     input  logic [AxiUserWidth-1:0] priv_ids_i            [NumPrivIds],
 `endif
+`elsif I3C_USE_SIMPLE
+    // Simple Register Bank Interface
+    output logic [SimpleAddrWidth-1:0] reg_addr_o,
+    output logic [SimpleDataWidth-1:0] reg_wdata_o,
+    output logic                       reg_we_o,
+    output logic                       reg_re_o,
+    input  logic [SimpleDataWidth-1:0] reg_rdata_i,
 `endif
 
     // I3C bus IO
@@ -237,6 +251,52 @@ module i3c
     output logic irq_o
 );
 
+`ifdef I3C_USE_SIMPLE
+  logic phy2ctrl_scl;
+  logic phy2ctrl_sda;
+  logic ctrl2phy_scl;
+  logic ctrl2phy_sda;
+  logic ctrl_sel_od_pp;
+  logic ctrl_sda_oe;
+  logic ctrl_irq, tti_irq, recovery_irq;
+  logic arbitration_lost, arbitration_lost_q;
+  logic bus_scl_posedge;
+
+  assign arbitration_lost   = phy2ctrl_sda != i3c_sda_o;
+  assign arbitration_lost_q = arbitration_lost & bus_scl_posedge;
+
+  assign dat_mem_sink_o               = '0;
+  assign dct_mem_sink_o               = '0;
+  assign recovery_payload_available_o = 1'b0;
+  assign recovery_image_activated_o   = 1'b0;
+  assign ctrl_irq                     = 1'b0;
+  assign tti_irq                      = 1'b0;
+  assign recovery_irq                 = 1'b0;
+
+  i3c_simple_target #(
+      .RegAddrWidth(SimpleAddrWidth),
+      .RegDataWidth(SimpleDataWidth)
+  ) xi3c_simple_target (
+      .clk_i                  (clk_i),
+      .rst_ni                 (rst_ni),
+      .scl_i                  (phy2ctrl_scl),
+      .sda_i                  (phy2ctrl_sda),
+      .scl_o                  (ctrl2phy_scl),
+      .sda_o                  (ctrl2phy_sda),
+      .sda_oe_o               (ctrl_sda_oe),
+      .sel_od_pp_o            (ctrl_sel_od_pp),
+      .arbitration_lost_i     (arbitration_lost_q),
+      .bus_scl_posedge_o      (bus_scl_posedge),
+      .reg_addr_o             (reg_addr_o),
+      .reg_wdata_o            (reg_wdata_o),
+      .reg_we_o               (reg_we_o),
+      .reg_re_o               (reg_re_o),
+      .reg_rdata_i            (reg_rdata_i),
+      .peripheral_reset_o     (peripheral_reset_o),
+      .peripheral_reset_done_i(peripheral_reset_done_i),
+      .escalated_reset_o      (escalated_reset_o)
+  );
+`else
   // I3C SW CSR IF
   logic                             s_cpuif_req;
   logic                             s_cpuif_req_is_wr;
@@ -1535,6 +1595,8 @@ module i3c
     assign recovery_payload_available_o = 1'b0;
     assign recovery_image_activated_o = 1'b0;
   end
+`endif
+
   // I3C PHY
   i3c_phy xphy (
       .clk_i(clk_i),

@@ -1,0 +1,74 @@
+// SPDX-License-Identifier: Apache-2.0
+// Example 8-bit PMIC Register Map in SystemRDL
+// Demonstrates RW trimming/programming outputs, RO status inputs, and empty bit gaps.
+
+addrmap pmic_regbank {
+    default regwidth = 8;
+    default accesswidth = 8;
+
+    signal {activelow; async; field_reset; cpuif_reset;} rst_ni;
+
+    reg {
+        name = "Buck 1 Configuration";
+        field {
+            name = "Buck 1 Output Voltage Trim";
+            sw = rw; hw = r;
+        } buck1_vout_trim[4:0] = 5'h00;
+        // Bits [6:5] are empty / unimplemented
+        field {
+            name = "Buck 1 Enable";
+            sw = rw; hw = r;
+        } buck1_en[7:7] = 1'b0;
+    } BUCK1_CFG @ 0x00;
+
+    reg {
+        name = "LDO 1 Configuration";
+        field {
+            name = "LDO 1 Output Voltage Trim";
+            sw = rw; hw = r;
+        } ldo1_vout_trim[2:0] = 3'h0;
+        // Bit [3] is empty / unimplemented
+        field {
+            name = "LDO 1 Enable";
+            sw = rw; hw = r;
+        } ldo1_en[4:4] = 1'b0;
+        // Bits [7:5] are empty / unimplemented
+    } LDO1_CFG @ 0x01;
+
+    reg {
+        name = "PMIC Live Status";
+        field {
+            name = "Buck 1 Power Good";
+            sw = r; hw = w;
+        } buck1_pgood[0:0];
+        field {
+            name = "LDO 1 Power Good";
+            sw = r; hw = w;
+        } ldo1_pgood[1:1];
+        // Bits [3:2] are empty / unimplemented
+        field {
+            name = "Over-Voltage Protection Fault";
+            sw = r; hw = w;
+        } ovp_fault[4:4];
+        field {
+            name = "Over-Temperature Warning";
+            sw = r; hw = w;
+        } otp_warn[5:5];
+        // Bits [7:6] are empty / unimplemented
+    } PMIC_STATUS @ 0x02;
+
+    reg {
+        name = "Oscillator Trim and Lock Status (Mixed RW + RO + Empty)";
+        field {
+            name = "Oscillator Frequency Trim";
+            sw = rw; hw = r;
+        } osc_trim[3:0] = 4'h0;
+        // Bits [5:4] are empty / unimplemented
+        field {
+            name = "Oscillator PLL Lock Status";
+            sw = r; hw = w;
+        } osc_lock[6:6];
+        // Bit [7] is empty / unimplemented
+    } OSC_AND_STAT @ 0x03;
+};
+

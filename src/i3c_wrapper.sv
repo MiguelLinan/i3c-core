@@ -23,16 +23,21 @@ module i3c_wrapper
 `ifdef AXI_ID_FILTERING
     parameter int unsigned NumPrivIds = `NUM_PRIV_IDS,
 `endif
+`elsif I3C_USE_SIMPLE
+    parameter int unsigned SimpleAddrWidth = `SIMPLE_ADDR_WIDTH,
+    parameter int unsigned SimpleDataWidth = `SIMPLE_DATA_WIDTH,
 `endif
     parameter int unsigned DatAw = i3c_pkg::DatAw,
-    parameter int unsigned DctAw = i3c_pkg::DctAw,
-
+    parameter int unsigned DctAw = i3c_pkg::DctAw
+`ifndef I3C_USE_SIMPLE
+    ,
     parameter int unsigned CsrAddrWidth = (ControllerEn && TargetEn) ? controller_and_target_I3CCSR_pkg::controller_and_target_I3CCSR_MIN_ADDR_WIDTH :
                                (ControllerEn)             ? controller_I3CCSR_pkg::controller_I3CCSR_MIN_ADDR_WIDTH :
                                                             target_I3CCSR_pkg::target_I3CCSR_MIN_ADDR_WIDTH,
     parameter int unsigned CsrDataWidth = (ControllerEn && TargetEn) ? controller_and_target_I3CCSR_pkg::controller_and_target_I3CCSR_DATA_WIDTH :
                                (ControllerEn)             ? controller_I3CCSR_pkg::controller_I3CCSR_DATA_WIDTH :
                                                             target_I3CCSR_pkg::target_I3CCSR_DATA_WIDTH
+`endif
 ) (
     input clk_i,  // clock
     input rst_ni, // active low reset
@@ -115,6 +120,13 @@ module i3c_wrapper
     input logic disable_id_filtering_i,
     input logic [AxiUserWidth-1:0] priv_ids_i[NumPrivIds],
 `endif
+`elsif I3C_USE_SIMPLE
+    // Simple Register Bank Interface
+    output logic [SimpleAddrWidth-1:0] reg_addr_o,
+    output logic [SimpleDataWidth-1:0] reg_wdata_o,
+    output logic                       reg_we_o,
+    output logic                       reg_re_o,
+    input  logic [SimpleDataWidth-1:0] reg_rdata_i,
 `endif
 
     // I3C bus driver signals
@@ -158,7 +170,11 @@ module i3c_wrapper
     i3c #(
         .ControllerEn(ControllerEn),
         .TargetEn(TargetEn),
+`ifndef I3C_USE_SIMPLE
         .csr_cfg_t(controller_and_target_csr_t),
+        .CsrDataWidth(CsrDataWidth),
+        .CsrAddrWidth(CsrAddrWidth),
+`endif
 `ifdef I3C_USE_AHB
         .AhbDataWidth(AhbDataWidth),
         .AhbAddrWidth(AhbAddrWidth),
@@ -167,12 +183,13 @@ module i3c_wrapper
         .AxiAddrWidth(AxiAddrWidth),
         .AxiUserWidth(AxiUserWidth),
         .AxiIdWidth(AxiIdWidth),
+`elsif I3C_USE_SIMPLE
+        .SimpleAddrWidth(SimpleAddrWidth),
+        .SimpleDataWidth(SimpleDataWidth),
 `endif
 `ifdef AXI_ID_FILTERING
         .NumPrivIds(NumPrivIds),
 `endif
-        .CsrDataWidth(CsrDataWidth),
-        .CsrAddrWidth(CsrAddrWidth),
         .DatAw(DatAw),
         .DctAw(DctAw)
     ) i3c (
@@ -241,6 +258,12 @@ module i3c_wrapper
         .disable_id_filtering_i(disable_id_filtering_i),
         .priv_ids_i(priv_ids_i),
 `endif
+`elsif I3C_USE_SIMPLE
+        .reg_addr_o(reg_addr_o),
+        .reg_wdata_o(reg_wdata_o),
+        .reg_we_o(reg_we_o),
+        .reg_re_o(reg_re_o),
+        .reg_rdata_i(reg_rdata_i),
 `endif
 
         .i3c_scl_i   (scl_i),
@@ -268,7 +291,11 @@ module i3c_wrapper
     i3c #(
         .ControllerEn(ControllerEn),
         .TargetEn(TargetEn),
+`ifndef I3C_USE_SIMPLE
         .csr_cfg_t(controller_csr_t),
+        .CsrDataWidth(CsrDataWidth),
+        .CsrAddrWidth(CsrAddrWidth),
+`endif
 `ifdef I3C_USE_AHB
         .AhbDataWidth(AhbDataWidth),
         .AhbAddrWidth(AhbAddrWidth),
@@ -277,12 +304,13 @@ module i3c_wrapper
         .AxiAddrWidth(AxiAddrWidth),
         .AxiUserWidth(AxiUserWidth),
         .AxiIdWidth(AxiIdWidth),
+`elsif I3C_USE_SIMPLE
+        .SimpleAddrWidth(SimpleAddrWidth),
+        .SimpleDataWidth(SimpleDataWidth),
 `endif
 `ifdef AXI_ID_FILTERING
         .NumPrivIds(NumPrivIds),
 `endif
-        .CsrDataWidth(CsrDataWidth),
-        .CsrAddrWidth(CsrAddrWidth),
         .DatAw(DatAw),
         .DctAw(DctAw)
     ) i3c (
@@ -351,6 +379,12 @@ module i3c_wrapper
         .disable_id_filtering_i(disable_id_filtering_i),
         .priv_ids_i(priv_ids_i),
 `endif
+`elsif I3C_USE_SIMPLE
+        .reg_addr_o(reg_addr_o),
+        .reg_wdata_o(reg_wdata_o),
+        .reg_we_o(reg_we_o),
+        .reg_re_o(reg_re_o),
+        .reg_rdata_i(reg_rdata_i),
 `endif
 
         .i3c_scl_i   (scl_i),
@@ -378,7 +412,11 @@ module i3c_wrapper
     i3c #(
         .ControllerEn(ControllerEn),
         .TargetEn(TargetEn),
+`ifndef I3C_USE_SIMPLE
         .csr_cfg_t(target_csr_t),
+        .CsrDataWidth(CsrDataWidth),
+        .CsrAddrWidth(CsrAddrWidth),
+`endif
 `ifdef I3C_USE_AHB
         .AhbDataWidth(AhbDataWidth),
         .AhbAddrWidth(AhbAddrWidth),
@@ -387,12 +425,13 @@ module i3c_wrapper
         .AxiAddrWidth(AxiAddrWidth),
         .AxiUserWidth(AxiUserWidth),
         .AxiIdWidth(AxiIdWidth),
+`elsif I3C_USE_SIMPLE
+        .SimpleAddrWidth(SimpleAddrWidth),
+        .SimpleDataWidth(SimpleDataWidth),
 `endif
 `ifdef AXI_ID_FILTERING
         .NumPrivIds(NumPrivIds),
 `endif
-        .CsrDataWidth(CsrDataWidth),
-        .CsrAddrWidth(CsrAddrWidth),
         .DatAw(DatAw),
         .DctAw(DctAw)
     ) i3c (
@@ -461,6 +500,12 @@ module i3c_wrapper
         .disable_id_filtering_i(disable_id_filtering_i),
         .priv_ids_i(priv_ids_i),
 `endif
+`elsif I3C_USE_SIMPLE
+        .reg_addr_o(reg_addr_o),
+        .reg_wdata_o(reg_wdata_o),
+        .reg_we_o(reg_we_o),
+        .reg_re_o(reg_re_o),
+        .reg_rdata_i(reg_rdata_i),
 `endif
 
         .i3c_scl_i   (scl_i),
@@ -488,6 +533,7 @@ module i3c_wrapper
     $fatal(1, "Invalid configuration specified!");
   end
 
+`ifndef I3C_USE_SIMPLE
   if (ControllerEn) begin : gen_controller_dxt_memories
     prim_ram_1p_adv #(
         .Depth(`DAT_DEPTH),
@@ -525,7 +571,7 @@ module i3c_wrapper
         .cfg_i('0)  // Unused
     );
   end
-
+`endif
 
   assign scl_oe = 1'b0;
 

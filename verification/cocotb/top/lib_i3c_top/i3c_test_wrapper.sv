@@ -15,6 +15,9 @@ module i3c_test_wrapper #(
 `ifdef AXI_ID_FILTERING
     parameter int unsigned NumPrivIds = `NUM_PRIV_IDS
 `endif
+`elsif I3C_USE_SIMPLE
+    parameter int unsigned SimpleAddrWidth = `SIMPLE_ADDR_WIDTH,
+    parameter int unsigned SimpleDataWidth = `SIMPLE_DATA_WIDTH
 `endif
 ) (
 `ifdef I3C_USE_AHB
@@ -83,6 +86,23 @@ module i3c_test_wrapper #(
     input logic disable_id_filtering_i,
     input logic [AxiUserWidth-1:0] priv_ids_i[NumPrivIds],
 `endif
+`elsif I3C_USE_SIMPLE
+    input  logic clk,
+    input  logic rst_n,
+
+    // PMIC Status inputs (packed into hwif_in for PeakRDL pmic_regbank)
+    input  logic buck1_pgood_i,
+    input  logic ldo1_pgood_i,
+    input  logic ovp_fault_i,
+    input  logic otp_warn_i,
+    input  logic osc_lock_i,
+
+    // PMIC Programming / Trimming outputs (unpacked from hwif_out of PeakRDL pmic_regbank)
+    output logic [4:0] buck1_vout_trim_o,
+    output logic       buck1_en_o,
+    output logic [2:0] ldo1_vout_trim_o,
+    output logic       ldo1_en_o,
+    output logic [3:0] osc_trim_o,
 `endif
     // I3C Target Simulation model
     input logic sda_sim_target_i,
@@ -118,6 +138,43 @@ module i3c_test_wrapper #(
 `elsif I3C_USE_AXI
   assign clk_i  = aclk;
   assign rst_ni = areset_n;
+`elsif I3C_USE_SIMPLE
+  assign clk_i  = clk;
+  assign rst_ni = rst_n;
+
+  logic [SimpleAddrWidth-1:0] reg_addr;
+  logic [SimpleDataWidth-1:0] reg_wdata;
+  logic                       reg_we;
+  logic                       reg_re;
+  logic [SimpleDataWidth-1:0] reg_rdata;
+
+  pmic_regbank_pkg::pmic_regbank__in_t  pmic_hwif_in;
+  pmic_regbank_pkg::pmic_regbank__out_t pmic_hwif_out;
+
+  assign pmic_hwif_in.rst_ni                        = rst_ni;
+  assign pmic_hwif_in.PMIC_STATUS.buck1_pgood.next  = buck1_pgood_i;
+  assign pmic_hwif_in.PMIC_STATUS.ldo1_pgood.next   = ldo1_pgood_i;
+  assign pmic_hwif_in.PMIC_STATUS.ovp_fault.next    = ovp_fault_i;
+  assign pmic_hwif_in.PMIC_STATUS.otp_warn.next     = otp_warn_i;
+  assign pmic_hwif_in.OSC_AND_STAT.osc_lock.next    = osc_lock_i;
+
+  assign buck1_vout_trim_o = pmic_hwif_out.BUCK1_CFG.buck1_vout_trim.value;
+  assign buck1_en_o        = pmic_hwif_out.BUCK1_CFG.buck1_en.value;
+  assign ldo1_vout_trim_o  = pmic_hwif_out.LDO1_CFG.ldo1_vout_trim.value;
+  assign ldo1_en_o         = pmic_hwif_out.LDO1_CFG.ldo1_en.value;
+  assign osc_trim_o        = pmic_hwif_out.OSC_AND_STAT.osc_trim.value;
+
+  pmic_regbank u_pmic_regbank (
+      .clk        (clk_i),
+      .rst        (~rst_ni),
+      .reg_addr_i (reg_addr),
+      .reg_wdata_i(reg_wdata),
+      .reg_we_i   (reg_we),
+      .reg_re_i   (reg_re),
+      .reg_rdata_o(reg_rdata),
+      .hwif_in    (pmic_hwif_in),
+      .hwif_out   (pmic_hwif_out)
+  );
 `endif
 
   localparam int unsigned NumDevices = 3;  // 2 BFMs (Controller, Target), 1 DUT (I3C Core)
@@ -237,6 +294,12 @@ module i3c_test_wrapper #(
       .disable_id_filtering_i(disable_id_filtering_i),
       .priv_ids_i(priv_ids_i),
 `endif
+`elsif I3C_USE_SIMPLE
+      .reg_addr_o (reg_addr),
+      .reg_wdata_o(reg_wdata),
+      .reg_we_o   (reg_we),
+      .reg_re_o   (reg_re),
+      .reg_rdata_i(reg_rdata),
 `endif
 
       .scl_i(bus_scl),

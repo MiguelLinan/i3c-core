@@ -80,5 +80,8 @@ ${I3C_ROOT_DIR}/src/ctrl/controller_active.sv
 ${I3C_ROOT_DIR}/src/ctrl/controller_standby.sv
 ${I3C_ROOT_DIR}/src/ctrl/controller.sv
 ${I3C_ROOT_DIR}/src/ctrl/stable_high_detector.sv
+${I3C_ROOT_DIR}/src/csr/pmic_regbank_pkg.sv
+${I3C_ROOT_DIR}/src/csr/pmic_regbank.sv
+${I3C_ROOT_DIR}/src/ctrl/i3c_simple_target.sv
 ${I3C_ROOT_DIR}/src/i3c.sv
 ${I3C_ROOT_DIR}/src/i3c_wrapper.sv
