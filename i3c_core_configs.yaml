@@ -226,3 +226,11 @@ axi_bypass:
   ControllerSupport: False
   TargetSupport: True
 
+simple_target_only:
+  FrontendBusInterface: "SIMPLE"
+  FrontendBusAddrWidth: 8
+  FrontendBusDataWidth: 8
+  DisableInputFF: False
+  DisableLoopback: True
+  ControllerSupport: False
+  TargetSupport: True

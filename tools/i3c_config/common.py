@@ -42,21 +42,30 @@ class RegGenConfig:
     _params = {}
 
     def __init__(self, cfg: I3CGenericConfig):
-        # Convert supplied FIFO depths to I3C CSR representations
-        self._params["cmd_fifo_size"] = cfg.CmdFifoDepth  # Size in entries
-        self._params["resp_fifo_size"] = cfg.RespFifoDepth  # Size in entries
+        # Convert supplied FIFO depths to I3C CSR representations (with defaults for FIFO-less configs)
+        cmd_fifo = getattr(cfg, "CmdFifoDepth", 64)
+        resp_fifo = getattr(cfg, "RespFifoDepth", 64)
+        tx_fifo = getattr(cfg, "TxFifoDepth", 64)
+        rx_fifo = getattr(cfg, "RxFifoDepth", 64)
+        ibi_fifo = getattr(cfg, "IbiFifoDepth", 64)
+        ext_ibi = getattr(cfg, "IbiFifoExtSize", False)
+        dat_depth = getattr(cfg, "DatDepth", 32)
+        dct_depth = getattr(cfg, "DctDepth", 32)
+
+        self._params["cmd_fifo_size"] = cmd_fifo  # Size in entries
+        self._params["resp_fifo_size"] = resp_fifo  # Size in entries
 
         # Size of the TX / RX fifos is encoded in the CSRs as 2^(N+1)
         # where N is value in the size CSR
-        self._params["tx_fifo_size"] = int(log2(cfg.TxFifoDepth) - 1)
-        self._params["rx_fifo_size"] = int(log2(cfg.RxFifoDepth) - 1)
+        self._params["tx_fifo_size"] = int(log2(tx_fifo) - 1)
+        self._params["rx_fifo_size"] = int(log2(rx_fifo) - 1)
 
         # Size in entries, or 8*N if `cfg.IbiFifoExtSize`
-        self._params["ibi_fifo_size"] = cfg.IbiFifoDepth
-        self._params["ext_ibi_size"] = int(cfg.IbiFifoExtSize)
+        self._params["ibi_fifo_size"] = ibi_fifo
+        self._params["ext_ibi_size"] = int(ext_ibi)
 
-        self._params["dat_depth"] = cfg.DatDepth - 1
-        self._params["dct_depth"] = cfg.DctDepth - 1
+        self._params["dat_depth"] = dat_depth - 1
+        self._params["dct_depth"] = dct_depth - 1
 
     def items(self):
         return self._params.items()
